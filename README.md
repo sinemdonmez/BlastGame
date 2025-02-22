@@ -1,7 +1,6 @@
 # BlastGame
 
-**BlastGame** is a Unity project developed as a learning exercise in game development.
-
+My first project developed with Unity.
 ---
 BlastGame is a simple puzzle game where your objective is to pop candies by matching two or more. Create powerful rockets and combos to clear rows, columns, and even entire sections of the board!
 
