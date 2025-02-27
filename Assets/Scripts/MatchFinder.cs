@@ -30,7 +30,7 @@ public class MatchFinder {
 
             foreach (Tile neighbor in GetNeighbors(current)) {
                 if (!visited.Contains(neighbor) &&
-                    !neighbor.isCurrentlyAnimating &&  // Check if the tile is not animating
+                    !neighbor.isAnimating &&  // Check if the tile is not animating
                     neighbor.tileType == startTile.tileType) {
                     
                     queue.Enqueue(neighbor);
@@ -40,6 +40,7 @@ public class MatchFinder {
         }
         return matchGroup;
     }
+
 
     public bool HasRocketNeighbor(Tile startTile){
         foreach (Tile neighbor in GetNeighbors(startTile)) {

@@ -269,8 +269,6 @@ public class GridManager : MonoBehaviour{
 
 
         // Start movement coroutine
-
-
         StartCoroutine(MoveTileGeneric(tile, targetPosition, 500f));
 
     }
@@ -304,6 +302,264 @@ public class GridManager : MonoBehaviour{
         }
 
     }
+
+
+
+
+
+
+
+    private Queue<(List<(Tile, Vector3)> animations, bool isGenerate)> animationQueue = new Queue<(List<(Tile, Vector3)>, bool)>();
+    private Dictionary<Tile, Coroutine> activeCoroutines = new Dictionary<Tile, Coroutine>();
+
+    private bool isProcessingQueue = false;
+
+
+
+    public void ShiftAndGenerateTiles1(){
+        // Step 1: Shift existing tiles down
+        List<(Tile, Vector3)> shiftAnimations = ShiftTiles1();
+
+        // Step 2: Generate new tiles (returns a list of column-wise lists)
+        List<List<(Tile, Vector3)>> generateAnimations = GenerateNewTiles1();
+
+        // Step 3: Add shift animations to the queue (false = no delay)
+        if (shiftAnimations.Count > 0)
+            animationQueue.Enqueue((shiftAnimations, false));
+
+        // Step 4: Add generate animations to the queue (true = delay inside the column)
+        foreach (var column in generateAnimations)
+            animationQueue.Enqueue((column, true)); // ✅ Columns queued but run independently
+
+        // Step 5: Start processing if not already running
+        if (!isProcessingQueue)
+            StartCoroutine(ProcessAnimationQueue());
+    }
+
+    private IEnumerator ProcessAnimationQueue(){
+        isProcessingQueue = true;
+
+        while (animationQueue.Count > 0){
+            (List<(Tile, Vector3)> currentBatch, bool isGenerate) = animationQueue.Dequeue();
+
+            // ✅ Start animations immediately (does NOT block queue)
+            StartCoroutine(AnimateTilesWithDelay(currentBatch, isGenerate ? 0.1f : 0f));
+        }
+
+        isProcessingQueue = false;
+        yield return null; // ✅ Ensures function always returns a value
+    }
+
+    private IEnumerator AnimateTilesWithDelay(List<(Tile, Vector3)> columnAnimations, float delayBetweenTiles){
+        int activeAnimations = columnAnimations.Count;
+        
+        
+
+        foreach (var (tile, targetPosition) in columnAnimations){
+            if(delayBetweenTiles>0)
+                yield return new WaitForSeconds(delayBetweenTiles);
+
+            tile.gameObject.SetActive(true);
+
+            // ✅ If a coroutine is already running on this tile, stop it
+            if (activeCoroutines.TryGetValue(tile, out Coroutine runningCoroutine)){
+                StopCoroutine(runningCoroutine);
+                activeCoroutines.Remove(tile);
+            }
+
+            // ✅ Mark tile as animating
+            tile.isAnimating = true;
+
+            // Start and track the new coroutine
+            Coroutine newCoroutine = StartCoroutine(MoveTileGeneric1(tile, targetPosition, 700f, () =>{
+                activeAnimations--;
+                tile.isAnimating = false;
+                activeCoroutines.Remove(tile); // ✅ Remove from tracking after completion
+            }));
+
+            activeCoroutines[tile] = newCoroutine; // ✅ Store new coroutine reference
+
+            //yield return new WaitForSeconds(delayBetweenTiles);
+        }
+
+        // ✅ Wait for all tiles in this column to finish before marking as done
+        while (activeAnimations > 0)
+            yield return null;
+
+        PrintGrid();
+    }
+
+
+
+    public List<(Tile, Vector3)> ShiftTiles1(){
+        List<(Tile, Vector3)> newAnimations = new List<(Tile, Vector3)>();
+
+        for (int x = 0; x < gridWidth; x++){
+            for (int y = gridHeight - 1; y >= 0; y--){
+                if (grid[x, y] == null){
+                    for (int aboveY = y - 1; aboveY >= 0; aboveY--){
+                        if (grid[x, aboveY] != null && !grid[x, aboveY].isNonMoveable){
+                            Vector3 targetPosition = positionGrid[x, y];
+
+                            // ✅ If already animating, stop the tile's specific coroutine
+                            if (activeCoroutines.TryGetValue(grid[x, aboveY], out Coroutine runningCoroutine)){
+                                StopCoroutine(runningCoroutine);
+                                activeCoroutines.Remove(grid[x, aboveY]);
+                            }
+
+                            newAnimations.Add((grid[x, aboveY], targetPosition));
+
+                            // ✅ Mark as animating
+                            grid[x, aboveY].isAnimating = true;
+
+                            // Move tile down logically
+                            grid[x, aboveY].SetGridPosition(x, y);
+                            grid[x, y] = grid[x, aboveY];
+                            grid[x, aboveY] = null;
+
+                            break; // Stop searching after moving a tile
+                        }
+
+                        if (grid[x, aboveY] != null && grid[x, aboveY].isNonMoveable)
+                            break; // Stop searching if a non-moveable tile is encountered
+                    }
+                }
+            }
+        }
+
+        return newAnimations;
+    }
+
+    public List<List<(Tile, Vector3)>> GenerateNewTiles1(){
+        List<List<(Tile, Vector3)>> allColumnAnimations = new List<List<(Tile, Vector3)>>();
+        for (int x = 0; x < gridWidth; x++){
+            List<(Tile, Vector3)> columnAnimations = new List<(Tile, Vector3)>();
+            int firstEmptyY = -1;
+
+            // Step 1: Identify the first empty space at the top of the column
+            for (int y = 0; y < gridHeight; y++){
+                if (grid[x, y] == null){ // Found an empty space
+                    if (firstEmptyY == -1){
+                        firstEmptyY = y; // Mark the first empty space
+                    }
+                }
+                else
+                    break;
+            }
+
+            // Step 2: If a top empty group exists, log from bottom of that group upwards
+            if (firstEmptyY != -1){
+                for (int y = gridHeight - 1; y >= firstEmptyY; y--){
+                    if (grid[x, y] == null){
+                        Debug.Log($"New tile at {x},{y}");
+                        Tile newTile = InstantiateTileAtTop(x);
+                        
+                        
+                        Vector3 targetPosition = positionGrid[x, y];
+                        columnAnimations.Add((newTile, targetPosition));
+                        newTile.SetGridPosition(x,y);
+                        grid[x,y] = newTile;
+                    }
+                }
+            }
+
+        if (columnAnimations.Count > 0)
+            allColumnAnimations.Add(columnAnimations);
+        
+        }
+
+        return allColumnAnimations;
+    }
+
+    public Tile InstantiateTileAtTop(int x){
+        GameObject newTile = Instantiate(tilePrefab, gridContainer);
+        RectTransform tileRect = newTile.GetComponent<RectTransform>();
+        newTile.SetActive(false);
+        newTile.transform.SetAsLastSibling();
+
+        // Set initial position at y = -1 (just above the grid)
+        Vector3 spawnPosition = new Vector3(
+            positionGrid[x, 0].x,
+            positionGrid[x, 0].y + (2 * (imageSize + spacing)),
+            0
+        );
+
+        tileRect.anchoredPosition = spawnPosition;
+        tileRect.sizeDelta = new Vector2(imageSize, imageSize);
+
+        // Assign a random tile type
+        string tileType = GetRandomTileType();
+
+        // Add Cube component and initialize
+        Tile tileComponent = newTile.AddComponent<Cube>();
+        tileComponent.Initialize(tileType, GetTileSprite(tileType));
+        tileComponent.SetGridManager(this);
+
+        return tileComponent;
+    }
+
+
+
+
+    private IEnumerator MoveTileGeneric1(Tile tile, Vector3 targetPosition, float speed, System.Action onComplete){
+        if (tile == null)
+            yield break;
+
+        RectTransform tileRect = tile.GetComponent<RectTransform>(); 
+        Vector2 startPosition = tileRect.anchoredPosition;
+        Vector2 targetPos2D = new Vector2(targetPosition.x, targetPosition.y);
+
+        // ✅ Smoothly transition to new target position
+        while (Vector2.Distance(tileRect.anchoredPosition, targetPos2D) > 1f){
+            tileRect.anchoredPosition = Vector2.MoveTowards(tileRect.anchoredPosition, targetPos2D, speed * Time.deltaTime);
+            yield return null;
+        }
+
+        tileRect.anchoredPosition = targetPos2D;
+
+        onComplete?.Invoke();
+    }
+
+
+
+
+    public void PrintGrid(){
+        string gridString = "";
+
+        for (int y = 0; y <gridHeight; y++){
+            for (int x = 0; x < gridWidth; x++){
+                if (grid[x, y] == null)
+                    gridString += "[  ] "; // Empty cell
+                else
+                    gridString += $"[{grid[x, y].tileType}] "; // Print tile type
+            }
+            gridString += "\n"; // New row
+        }
+
+        Debug.Log(gridString);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     public void ShiftAndGenerateTiles(System.Action onComplete = null){
         StartCoroutine(ShiftAndGenerateTilesCoroutine(onComplete));
@@ -411,9 +667,8 @@ public class GridManager : MonoBehaviour{
             Tile tileComponent = newTile.AddComponent<Cube>();
             tileComponent.Initialize(tileType, GetTileSprite(tileType));
             tileComponent.SetGridManager(this);
-            
-            tileComponent.transform.SetAsLastSibling();
             grid[x, targetY] = tileComponent;
+
             tileComponent.SetGridPosition(x, targetY);
             tileComponent.isCurrentlyAnimating = true;
 
@@ -689,41 +944,9 @@ public class GridManager : MonoBehaviour{
         }
     }
 
-    //Rocket
-    public IEnumerator ExplodeAndShift(Tile tile) {
-    // Start explosion and let it run
-        Debug.Log("🔥 ExplodeAndShift started");
-        tile.isCurrentlyExploding = true;
-
-        StartCoroutine(ExplodeRocketCoroutine(tile));
-
-        Debug.Log("🔥 Waiting for explosions...");
-        yield return new WaitUntil(() => activeExplosions.Count == 0);
-        Debug.Log("🔥 Explosions done!");
-
-        ShiftAndGenerateTiles(() => {
-            Debug.Log("🌀 Shift and generate complete!");
-            DetectRocketHints();
-        });
-
-        Debug.Log("✅ ExplodeAndShift completed");
-    }
-
-    public IEnumerator ExplodeAndShiftCross(Tile tile){
-        tile.isCurrentlyExploding = true;
-        yield return StartCoroutine(ExplodeRocketCrossCoroutine(tile)); // Ensure explosion finishes first
-
-        yield return new WaitUntil(() => activeExplosions.Count == 0);
-        
-        // Now trigger shifting and generating tiles
-        ShiftAndGenerateTiles(() =>
-        {
-            DetectRocketHints();
-        });
-    }
-
-    private IEnumerator ExplodeRocketCoroutine(Tile rocketTile) {
+    public IEnumerator ExplodeRocketCoroutine(Tile rocketTile) {
         if (rocketTile == null) yield break;
+        rocketTile.isCurrentlyExploding = true;
 
         int x = rocketTile.gridX;
         int y = rocketTile.gridY;
@@ -733,13 +956,8 @@ public class GridManager : MonoBehaviour{
         
 
         // Track explosion start
-        Coroutine explosion = StartCoroutine(ExplosionRoutine(x, y, rocketType));
-        activeExplosions.Add(explosion);
-        Destroy(rocketTile.gameObject);
-        yield return explosion; // Wait for explosion to complete
-
-        // Remove from active list when done
-        activeExplosions.Remove(explosion);
+        rocketTile.GetComponent<Image>().enabled = false;
+        yield return StartCoroutine(ExplosionRoutine(x, y, rocketType));
     }
 
     private IEnumerator ExplosionRoutine(int x, int y, string rocketType) {
@@ -765,126 +983,75 @@ public class GridManager : MonoBehaviour{
         }
     }
 
-    // private IEnumerator MoveRocketPiece(int startX, int startY, int directionX, int directionY, Sprite sprite) {
-    //     int x = startX;
-    //     int y = startY;
-
-    //     // Create the rocket piece once
-    //     Vector3 startPosition = positionGrid[x, y];
-    //     GameObject rocketObject = Instantiate(tilePrefab, gridContainer);
-    //     RectTransform rectTransform = rocketObject.GetComponent<RectTransform>();
-    //     rectTransform.anchoredPosition = startPosition;
-    //     rectTransform.sizeDelta = new Vector2(imageSize, imageSize);
-
-    //     // Attach the tile logic
-    //     Tile movingPiece = rocketObject.AddComponent<Rocket>();
-    //     movingPiece.Initialize("rocketpart", sprite);
-    //     movingPiece.SetGridManager(this);
-    //     movingPiece.SetGridPosition(x, y);
-    //     //AttachEffectsToTarget(movingPiece);
-    //     uiAnimator.AnimateRocketMove(movingPiece, directionX, directionY);
-
-    //     // Move the rocket through the grid
-    //     while (IsTileInsideGrid(x + directionX, y + directionY)) {
-    //         x += directionX;
-    //         y += directionY;
-            
-    //         Tile targetTile = grid[x, y];
-
-    //         if (targetTile != null && targetTile.tileType != "rocketpart" && !targetTile.isCurrentlyExploding) {
-    //             if (targetTile is Rocket) {
-    //                 // Start explosion but do NOT wait (parallel execution)
-    //                 StartCoroutine(ExplodeRocketCoroutine(targetTile));
-    //             } else {
-    //                 // Destroy the tile it moves over
-    //                 RemoveTiles(new List<Tile> { targetTile });
-    //             }
-    //         }
-
-    //         // Move the same rocket piece to the new position
-    //         Vector3 targetPosition = positionGrid[x, y];
-    //         yield return StartCoroutine(MoveTileGeneric(movingPiece, targetPosition, 500f));
-
-    //         //yield return new WaitForSeconds(0.2f);
-    //     }
-    //     Destroy(rocketObject);
-    // }
-
 
     private IEnumerator MoveRocketPiece(int startX, int startY, int directionX, int directionY, Sprite sprite) {
-    int x = startX;
-    int y = startY;
+        int x = startX;
+        int y = startY;
 
-    Debug.Log($"anan - Starting MoveRocketPiece at ({x}, {y})");
+        
 
-    // Create the rocket piece once
-    Vector3 startPosition = positionGrid[x, y];
-    GameObject rocketObject = Instantiate(tilePrefab, gridContainer);
-    RectTransform rectTransform = rocketObject.GetComponent<RectTransform>();
-    rectTransform.anchoredPosition = startPosition;
-    rectTransform.sizeDelta = new Vector2(imageSize, imageSize);
+        // Create the rocket piece once
+        Vector3 startPosition = positionGrid[x, y];
+        GameObject rocketObject = Instantiate(tilePrefab, gridContainer);
+        RectTransform rectTransform = rocketObject.GetComponent<RectTransform>();
+        rectTransform.anchoredPosition = startPosition;
+        rectTransform.sizeDelta = new Vector2(imageSize, imageSize);
 
-    // Attach the tile logic
-    Tile movingPiece = rocketObject.AddComponent<Rocket>();
-    movingPiece.Initialize("rocketpart", sprite);
-    movingPiece.SetGridManager(this);
-    movingPiece.SetGridPosition(x, y);
-    //AttachEffectsToTarget(movingPiece);
-    uiAnimator.AnimateRocketMove(movingPiece, directionX, directionY);
+        // Attach the tile logic
+        Tile movingPiece = rocketObject.AddComponent<Rocket>();
+        movingPiece.Initialize("rocketpart", sprite);
+        movingPiece.SetGridManager(this);
+        movingPiece.SetGridPosition(x, y);
+        //AttachEffectsToTarget(movingPiece);
+        uiAnimator.AnimateRocketMove(movingPiece, directionX, directionY);
 
-    // Move the rocket through the grid
-    while (IsTileInsideGrid(x + directionX, y + directionY)) {
-        x += directionX;
-        y += directionY;
+        List<Coroutine> explosionCoroutines = new List<Coroutine>();
 
-        Debug.Log($"anan - Moving to ({x}, {y})");
+        // Move the rocket through the grid
+        while (IsTileInsideGrid(x + directionX, y + directionY)) {
+            x += directionX;
+            y += directionY;
 
-        Tile targetTile = grid[x, y];
 
-        if (targetTile != null) {
-            Debug.Log($"anan - Found tile at ({x}, {y}), type: {targetTile.tileType}");
-        } else {
-            Debug.Log($"anan - No tile at ({x}, {y}), it is NULL!");
-        }
+            Tile targetTile = grid[x, y];
 
-        if (targetTile != null && targetTile.tileType != "rocketpart" && !targetTile.isCurrentlyExploding) {
-            if (targetTile is Rocket) {
-                Debug.Log($"anan - Rocket found at ({x}, {y}), triggering explosion.");
-                // Start explosion but do NOT wait (parallel execution)
-                StartCoroutine(ExplodeRocketCoroutine(targetTile));
-            } else {
-                Debug.Log($"anan - Destroying tile at ({x}, {y})");
-                // Destroy the tile it moves over
-                RemoveTiles(new List<Tile> { targetTile });
+            if (targetTile != null && targetTile.tileType != "rocketpart" && !targetTile.isCurrentlyExploding) {
+                if (targetTile is Rocket) {
+                    // Start explosion but do NOT wait (parallel execution)
+                    explosionCoroutines.Add(StartCoroutine(ExplodeRocketCoroutine(targetTile)));
+                } else {
+                    // Destroy the tile it moves over
+                    RemoveTiles(new List<Tile> { targetTile });
+                }
             }
+
+            // Move the same rocket piece to the new position
+            Vector3 targetPosition = positionGrid[x, y];
+            yield return StartCoroutine(MoveTileGeneric(movingPiece, targetPosition, 500f));
         }
 
-        // Move the same rocket piece to the new position
-        Vector3 targetPosition = positionGrid[x, y];
-        yield return StartCoroutine(MoveTileGeneric(movingPiece, targetPosition, 500f));
+        
+        Destroy(rocketObject);
+        foreach (Coroutine coroutine in explosionCoroutines) {
+            yield return coroutine;  // Wait for each coroutine to finish
+        }
     }
-    
-    Debug.Log($"anan - Rocket piece finished moving and will be destroyed at ({x}, {y})");
-    Destroy(rocketObject);
-}
 
 
-    private IEnumerator ExplodeRocketCrossCoroutine(Tile rocketTile) {
+    public IEnumerator ExplodeRocketCrossCoroutine(Tile rocketTile) {
         if (rocketTile == null) yield break;
+        rocketTile.isCurrentlyExploding = true;
 
         int x = rocketTile.gridX;
         int y = rocketTile.gridY;
 
+
+
         DestroySurroundingTiles(x, y);
 
-        // Track explosion start
-        Coroutine explosion = StartCoroutine(ExplosionCrossRoutine(x, y));
-        activeExplosions.Add(explosion);
-
-        yield return explosion; // Wait for explosion to complete
-
-        // Remove from active list when done
-        activeExplosions.Remove(explosion);
+        grid[x, y] = null;
+        rocketTile.GetComponent<Image>().enabled = false;
+        yield return StartCoroutine(ExplosionCrossRoutine(x, y));
     }
 
     private IEnumerator ExplosionCrossRoutine(int x, int y) {
@@ -914,9 +1081,10 @@ public class GridManager : MonoBehaviour{
     public void DestroySurroundingTiles(int x, int y){
         List<Tile> tilesToRemove = new List<Tile>();
 
+
+
         // Define the relative positions to destroy
         int[,] directions = {
-            { 0, 0 },   // (x, y) - Center Tile
             { 0, 1 },   // (x, y+1) - Above
             { 0, -1 },  // (x, y-1) - Below
             { -1, 0 },  // (x-1, y) - Left

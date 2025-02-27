@@ -3,5 +3,14 @@
        "grid_width": 9,
        "grid_height": 10,
        "move_count": 20,
-       "grid": ["bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "bo", "r", "r", "r", "r", "g", "b", "b", "b", "b", "y", "y", "y", "y", "g", "y", "y", "y", "y", "b", "b", "b", "b", "y", "r", "r", "r", "r", "rand", "rand", "rand", "rand", "y", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand"]
+       "grid": ["bo", "bo", "bo", "s", "s", "s", "cv", "cv", "cv", 
+                "bo","bo", "bo", "s", "s", "s", "v", "v", "v",
+                "bo", "bo", "bo", "s", "s", "s", "v", "v", "v", 
+                "r", "r", "r", "r", "vro", "hro", "b", "b", "b", 
+                "y", "y", "y", "y", "g", "y", "y", "y", "y", 
+                "b", "b", "b", "b", "y", "r", "r", "r", "r", 
+                "rand", "rand", "rand", "rand", "y", "rand", "rand", "rand", "rand", 
+                "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", 
+                "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", 
+                "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand", "rand"]
 }
