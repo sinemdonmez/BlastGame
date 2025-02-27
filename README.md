@@ -1,6 +1,6 @@
 # BlastGame
 
-My first project developed with Unity.
+A match & blast game developed with C# and Unity.
 ---
 BlastGame is a simple puzzle game where your objective is to pop tiles by matching two or more. Create powerful rockets and combos to clear rows, columns, and even entire sections of the board!
 
