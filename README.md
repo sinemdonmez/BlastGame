@@ -2,13 +2,13 @@
 
 My first project developed with Unity.
 ---
-BlastGame is a simple puzzle game where your objective is to pop candies by matching two or more. Create powerful rockets and combos to clear rows, columns, and even entire sections of the board!
+BlastGame is a simple puzzle game where your objective is to pop tiles by matching two or more. Create powerful rockets and combos to clear rows, columns, and even entire sections of the board!
 
 
 ## How to Play
 
 - **Match Candies:**  
-  Click adjacent candies to form groups of three or more. When matched, the candies pop off the board.
+  Click adjacent candies to form groups of three or more. When matched, the tiles pop off the board.
 
 - **Create Rockets:**  
   Matching four or more candies will spawn a rocket. When activated, a rocket clears either an entire row or an entire column.
@@ -21,8 +21,18 @@ BlastGame is a simple puzzle game where your objective is to pop candies by matc
 
 ## Future Fixes & Planned Enhancements
 
-- **Improved Input Handling:**  
-  Address issues with consecutive or overly quick clicks to ensure smoother gameplay.
+- [x] **(Fixed)Improved Input Handling:**  
+  Addressed issues with consecutive or overly quick clicks to ensure smoother gameplay.
+
+- [ ] **Different Types of Tiles and Combos:**  
+  Implement various tile types and unique combo mechanics to enhance gameplay depth.
+
+
+
+
+
+
+
 
 
 ## Assets & Credits
