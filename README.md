@@ -47,6 +47,7 @@ Assets for this project are borrowed from the following links:
 - [Candy Match 3](https://opengameart.org/content/candy-match-3)
 - [Particle Sprite Bundle](https://rhymetraveler.itch.io/particle-sprite-bundle)
 - [Free Game GUI](https://pzuh.itch.io/free-game-gui)
+- [Kenney](https://kenney.nl/assets)
 
 
 ---
