@@ -13,11 +13,11 @@ BlastGame is a simple puzzle game where your objective is to pop tiles by matchi
 
 ## How to Play
 
-- **Match Candies:**  
-  Click adjacent candies to form groups of three or more. When matched, the tiles pop off the board.
+- **Match Tiles:**  
+  Click adjacent tiles to form groups of three or more. When matched, the tiles pop off the board.
 
 - **Create Rockets:**  
-  Matching four or more candies will spawn a rocket. When activated, a rocket clears either an entire row or an entire column.
+  Matching four or more tiles will spawn a rocket. When activated, a rocket clears either an entire row or an entire column.
 
 - **Rocket Combos:**  
   Trigger a rocket combo by clicking on a rocket that is adjacent to another rocket. This creates an even more powerful blast!
