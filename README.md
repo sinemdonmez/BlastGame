@@ -4,6 +4,12 @@ My first project developed with Unity.
 ---
 BlastGame is a simple puzzle game where your objective is to pop tiles by matching two or more. Create powerful rockets and combos to clear rows, columns, and even entire sections of the board!
 
+<p align="center">
+  <img src="Assets/GamePics/Screenshot%20from%202025-02-27%2023-35-06.png" width="30%">
+  <img src="Assets/GamePics/Screenshot%20from%202025-02-27%2023-37-54.png" width="30.5%">
+</p>
+<p align="center"><i>Left: A level with all types of tiles | Right: Rocket combo in action</i></p>
+
 
 ## How to Play
 
