@@ -30,6 +30,9 @@ BlastGame is a simple puzzle game where your objective is to pop tiles by matchi
 - [x] **(Fixed)Improved Input Handling:**  
   Addressed issues with consecutive or overly quick clicks to ensure smoother gameplay.
 
+- [ ] **Object Pooling:**  
+Implement object pooling to reduce memory allocation and garbage collection overhead.
+
 - [ ] **Different Types of Tiles and Combos:**  
   Implement various tile types and unique combo mechanics to enhance gameplay depth.
 
